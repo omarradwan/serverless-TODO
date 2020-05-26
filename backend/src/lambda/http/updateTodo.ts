@@ -7,7 +7,9 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { UpdateTodoRequest } from '../../requests/UpdateTodoRequest'
 import { TodoService } from '../../service/todoService'
 import { getUserId } from '../utils'
+import { createLogger } from '../../utils/logger'
 
+const logger = createLogger('update-todo')
 const todoService = new TodoService()
 
 export const handler = middy(async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -24,6 +26,8 @@ export const handler = middy(async (event: APIGatewayProxyEvent): Promise<APIGat
       body: JSON.stringify({error: 'Unauthorized'})
     }
   }
+
+  logger.info(`user ${userId} is authorized to update todo`, todoItem)
 
   await todoService.updateTodo(todoItem, updatedTodo)
 

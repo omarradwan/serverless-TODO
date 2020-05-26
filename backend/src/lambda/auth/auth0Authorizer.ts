@@ -56,8 +56,25 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
   const token = getToken(authHeader)
   const jwt: Jwt = decode(token, { complete: true }) as Jwt
 
-  const signingKey = await client.getSigningKey(jwt.header.kid)
-  return verify(token, signingKey.getPublicKey(), { algorithms: ['RS256'] }) as JwtPayload
+  const certificate = await getCertificate(jwt.header.kid)
+
+  return verify(token, certificate, { algorithms: ['RS256'] }) as JwtPayload
+}
+
+function getCertificate(kid: string): Promise<string> {
+  logger.info('kid:', kid)
+
+  return new Promise((res, rej) => {
+    client.getSigningKey(kid, (err, key) => {
+      logger.info('certificate:', key.getPublicKey())
+      
+      if (err) {
+        return rej(err)
+      } else {
+        return res(key.getPublicKey())
+      }
+    })
+  })
 }
 
 function getToken(authHeader: string): string {
