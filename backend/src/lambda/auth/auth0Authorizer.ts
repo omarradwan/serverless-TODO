@@ -3,10 +3,8 @@ import 'source-map-support/register'
 
 import { verify, decode } from 'jsonwebtoken'
 import { createLogger } from '../../utils/logger'
-import Axios from 'axios'
 import { Jwt } from '../../auth/Jwt'
 import { JwtPayload } from '../../auth/JwtPayload'
-import { url } from 'inspector'
 
 const logger = createLogger('auth')
 
@@ -58,8 +56,8 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
   const token = getToken(authHeader)
   const jwt: Jwt = decode(token, { complete: true }) as Jwt
 
-  await client.getSigningKey(jwt.header.kid);
-  return jwt.payload
+  const signingKey = await client.getSigningKey(jwt.header.kid)
+  return verify(token, signingKey.getPublicKey(), { algorithms: ['RS256'] }) as JwtPayload
 }
 
 function getToken(authHeader: string): string {
