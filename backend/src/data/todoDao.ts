@@ -4,9 +4,8 @@ import * as AWSXRay from 'aws-xray-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { TodoItem } from '../models/TodoItem'
 import { createLogger } from '../utils/logger'
-import { TodoUpdate } from '../models/TodoUpdate'
 
-const logger = createLogger('auth')
+const logger = createLogger('dao')
 const XAWS = AWSXRay.captureAWS(AWS)
 
 const todosTableName = process.env.TODOS_TABLE
@@ -45,29 +44,25 @@ export class TodoDao {
           return todoItem
     }
 
-    async updateTodo(todoId: string, todoUpdate: TodoUpdate): Promise<void>{
-        logger.info(`Updating existing todo item with id: ${todoId}`)
-
-        const oldItem = await this.getTodoById(todoId)
+    async updateTodo(updatedTodo: TodoItem): Promise<void>{
+        logger.info(`Updating existing todo: ${updatedTodo}`)
 
         await this.docClient.put({
             TableName: todosTableName,
-            Item: this.getUpdatedTodoItem(oldItem, todoUpdate)
+            Item: updatedTodo
           }).promise()    
     }
 
-    async deleteTodo(todoId: string): Promise<void>{
-        logger.info(`Deleting existing todo item with id: ${todoId}`)
+    async deleteTodo(userId: string, createdAt: string): Promise<void>{
+        logger.info(`Deleting existing todo item owned by user with id: ${userId}`)
         
-        const todoItem = await this.getTodoById(todoId)
-
         await this.docClient.delete({
             TableName: todosTableName,
-            Key: { userId: todoItem.userId, createdAt: todoItem.createdAt },
+            Key: { userId, createdAt },
           }).promise()      
     }
 
-    private async getTodoById(id: string): Promise<TodoItem> {
+    async getTodoById(id: string): Promise<TodoItem> {
         logger.info(`Getting todo item with id: ${id}`)
 
         const result = await this.docClient.query({
@@ -85,23 +80,6 @@ export class TodoDao {
           }
           const items = result.Items
           return items[0] as TodoItem
-    }
-
-    private getUpdatedTodoItem(oldItem: TodoItem, updates: TodoUpdate): object {
-        logger.info(`updating todo: ${oldItem} with the following values: ${updates}`)
-
-        let newItem = {}
-        for (let key in updates) {
-            if (updates[key]) {
-                newItem[key] = updates[key]
-            } else {
-                newItem[key] = oldItem[key]
-            }
-        }
-
-        logger.info(`updated todo is: ${newItem}`)
-
-        return newItem
     }
 }
 
